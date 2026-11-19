@@ -11,6 +11,7 @@ import { Badge, Button, Card, CardHeader, ErrorNote, Field, Input, PageHeader, S
 import { api, dateTime, num, usd } from "@/lib/api";
 import type { Me } from "@/lib/auth";
 import { useMe } from "@/lib/hooks";
+import { GeminiKeyCard } from "@/components/content/gemini-key-card";
 
 type Usage = {
   since: string;
@@ -451,6 +452,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings and usage" description={`Signed in as ${me.data.user.email}`} />
       <div className="space-y-6">
         <YepKeyCard settings={me.data.settings} />
+        <GeminiKeyCard settings={me.data.settings} />
         <UsageCard />
         <BudgetCard settings={me.data.settings} />
         {me.data.links && <AgentCard links={me.data.links} />}

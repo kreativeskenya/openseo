@@ -89,6 +89,12 @@ export const userSettings = pgTable("user_settings", {
   yepapiKeyEnc: text("yepapi_key_enc"),
   yepapiKeyHint: text("yepapi_key_hint"),
   yepapiKeyCheckedAt: timestamp("yepapi_key_checked_at", { withTimezone: true }),
+  // Gemini (Google AI Studio) key for Content Studio: encrypted like the YepAPI key, never returned by the API.
+  geminiKeyEnc: text("gemini_key_enc"),
+  geminiKeyHint: text("gemini_key_hint"),
+  geminiKeyCheckedAt: timestamp("gemini_key_checked_at", { withTimezone: true }),
+  // Ordered model chain: the first is tried first, the rest are fallbacks. Null uses the built-in default.
+  geminiModels: text("gemini_models").array(),
   // Optional monthly ceiling the app enforces on its own spending, in USD.
   monthlyBudgetUsd: doublePrecision("monthly_budget_usd"),
   // When the user finished the first-run welcome (app /welcome). Null shows it on the next visit.

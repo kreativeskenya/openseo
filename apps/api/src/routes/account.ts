@@ -14,6 +14,10 @@ async function settingsFor(userId: string) {
     hasYepapiKey: Boolean(row?.yepapiKeyEnc),
     yepapiKeyHint: row?.yepapiKeyHint ?? null,
     yepapiKeyCheckedAt: row?.yepapiKeyCheckedAt ?? null,
+    hasGeminiKey: Boolean(row?.geminiKeyEnc),
+    geminiKeyHint: row?.geminiKeyHint ?? null,
+    geminiKeyCheckedAt: row?.geminiKeyCheckedAt ?? null,
+    geminiModels: row?.geminiModels ?? null,
     monthlyBudgetUsd: row?.monthlyBudgetUsd ?? null,
     onboardedAt: row?.onboardedAt ?? null,
   };
