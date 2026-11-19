@@ -78,6 +78,13 @@
       "when": 1795085699605,
       "tag": "0010_windy_harrier",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795087658840,
+      "tag": "0011_brown_diamondback",
+      "breakpoints": true
     }
   ]
 }

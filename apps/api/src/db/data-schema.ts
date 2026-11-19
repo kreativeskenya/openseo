@@ -750,3 +750,48 @@ export const contentFacts = pgTable(
   },
   (t) => [index("content_facts_project_idx").on(t.projectId), index("content_facts_store_idx").on(t.storeId)],
 );
+
+// ── Content Studio: drafts the writer produced ──────────────────────────────
+
+export const DRAFT_STATUSES = ["draft", "approved", "discarded"] as const;
+export type DraftStatus = (typeof DRAFT_STATUSES)[number];
+
+export type DraftContent = {
+  title: string;
+  metaDescription: string;
+  intro: string;
+  bestFor: string[];
+  worksWith: string[];
+  specs: Record<string, string>;
+  faqs: { question: string; answer: string }[];
+  troubleshooting: { problem: string; checks: string[] }[];
+};
+
+export const contentDrafts = pgTable(
+  "content_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => contentStores.id, { onDelete: "cascade" }),
+    // A draft outlives its product, so the name is copied here.
+    productId: uuid("product_id").references(() => contentProducts.id, { onDelete: "set null" }),
+    productName: text("product_name").notNull(),
+    status: text("status").$type<DraftStatus>().notNull().default("draft"),
+    keyword: text("keyword"),
+    content: jsonb("content").$type<DraftContent>().notNull(),
+    // Exactly what the writer was given, so every claim in the draft can be checked against it.
+    input: jsonb("input").$type<Record<string, unknown>>().notNull(),
+    // Things in the draft that are not in the input. A person must read these before approving.
+    problems: jsonb("problems").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+    model: text("model").notNull(),
+    promptTokens: integer("prompt_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("content_drafts_store_idx").on(t.storeId), index("content_drafts_project_idx").on(t.projectId)],
+);
