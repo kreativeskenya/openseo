@@ -71,6 +71,13 @@
       "when": 1795083241188,
       "tag": "0009_loving_lightspeed",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795085699605,
+      "tag": "0010_windy_harrier",
+      "breakpoints": true
     }
   ]
 }

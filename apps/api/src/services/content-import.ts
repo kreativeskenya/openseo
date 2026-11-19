@@ -7,7 +7,8 @@ const MAX_SPECS = 25;
 export class ImportError extends Error {}
 
 export type ImportRow = {
-  url: string;
+  url: string | null;
+  slug: string;
   name: string;
   brand: string | null;
   category: string | null;
@@ -31,6 +32,8 @@ export type ImportParse = {
 const COLUMNS = {
   name: ["name", "title", "product_name"],
   url: ["product_url", "url", "link"],
+  slug: ["slug", "handle"],
+  regular: ["regular_price"],
   description: ["description", "details"],
   facts: ["facts"],
   brand: ["brand"],
@@ -132,6 +135,19 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
 }
 
+/** A slug is the match key. Lowercase letters, digits, dashes, underscores and dots only. */
+const slugOf = (raw: string): string | null => {
+  const s = raw.trim().toLowerCase();
+  return /^[a-z0-9][a-z0-9_.-]{0,199}$/.test(s) ? s : null;
+};
+const slugFromUrl = (url: string): string | null => {
+  try {
+    return slugOf(new URL(url).pathname.replace(/\/+$/, "").split("/").pop() ?? "");
+  } catch {
+    return null;
+  }
+};
+
 export function normalizeCsv(text: string): ImportParse {
   const [head, ...body] = parseCsv(text);
   if (!head) throw new ImportError("The file is empty");
@@ -145,7 +161,9 @@ export function normalizeCsv(text: string): ImportParse {
   };
   const nameCol = col(COLUMNS.name);
   const urlCol = col(COLUMNS.url);
-  if (nameCol < 0 || urlCol < 0) throw new ImportError("The CSV needs a name column and a product_url column");
+  const slugCol = col(COLUMNS.slug);
+  const regularCol = col(COLUMNS.regular);
+  if (nameCol < 0 || (urlCol < 0 && slugCol < 0)) throw new ImportError("The CSV needs a name column and a product_url or slug column");
   if (body.length > MAX_IMPORT_ROWS) throw new ImportError(`Import at most ${MAX_IMPORT_ROWS} products at a time`);
   const descCol = col(COLUMNS.description);
   const factsCol = col(COLUMNS.facts);
@@ -156,24 +174,28 @@ export function normalizeCsv(text: string): ImportParse {
   const warrantyCol = col(COLUMNS.warranty);
   const cell = (row: string[], i: number) => (i >= 0 ? (row[i] ?? "").trim() : "");
 
-  const byUrl = new Map<string, ImportRow>();
+  const bySlug = new Map<string, ImportRow>();
   let skipped = 0;
   let duplicates = 0;
   for (const row of body) {
     const name = cell(row, nameCol).replace(/\s+/g, " ").slice(0, 300);
-    const url = cell(row, urlCol);
-    if (!name || !/^https?:\/\/\S+$/i.test(url)) {
+    const rawUrl = cell(row, urlCol);
+    const url = /^https?:\/\/\S+$/i.test(rawUrl) ? rawUrl : null;
+    const slug = slugOf(cell(row, slugCol)) ?? (url ? slugFromUrl(url) : null);
+    if (!name || !slug) {
       skipped++;
       continue;
     }
     const description = [cleanHtml(cell(row, descCol)), cleanHtml(cell(row, factsCol))].filter(Boolean).join("\n").slice(0, MAX_DESCRIPTION);
-    const price = parsePrice(cell(row, priceCol));
+    // regular_price is the normal price; a sale price counts only when it is lower.
+    const price = parsePrice(cell(row, regularCol)) ?? parsePrice(cell(row, priceCol));
     let sale = parsePrice(cell(row, saleCol));
     if (price === null || (sale !== null && sale >= price)) sale = null;
     const warranty = cell(row, warrantyCol).slice(0, 60) || extractWarranty(description);
-    if (byUrl.has(url)) duplicates++;
-    byUrl.set(url, {
+    if (bySlug.has(slug)) duplicates++;
+    bySlug.set(slug, {
       url,
+      slug,
       name,
       brand: cell(row, brandCol).slice(0, 80) || null,
       category: cell(row, categoryCol).slice(0, 80) || null,
@@ -184,7 +206,7 @@ export function normalizeCsv(text: string): ImportParse {
       warranty: warranty || null,
     });
   }
-  const rows = [...byUrl.values()];
+  const rows = [...bySlug.values()];
   return {
     rows,
     total: body.length,
@@ -198,11 +220,12 @@ export function normalizeCsv(text: string): ImportParse {
 
 const stable = (o: Record<string, string>) => JSON.stringify(Object.entries(o).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 
-type Stored = Pick<ImportRow, "name" | "brand" | "category" | "description" | "specs" | "priceKes" | "salePriceKes" | "warranty">;
+type Stored = Pick<ImportRow, "url" | "name" | "brand" | "category" | "description" | "specs" | "priceKes" | "salePriceKes" | "warranty">;
 
 /** Whether a stored product already matches an imported row. A brand or category the file leaves blank is kept as edited. */
 export function sameProduct(a: Stored, b: ImportRow): boolean {
   return (
+    (b.url === null || a.url === b.url) &&
     a.name === b.name &&
     a.description === b.description &&
     a.priceKes === b.priceKes &&

@@ -86,8 +86,8 @@ describe("normalizeCsv", () => {
 });
 
 describe("sameProduct", () => {
-  const row = { url: "u", name: "n", brand: null, category: null, description: "d", specs: { b: "2", a: "1" }, priceKes: 10, salePriceKes: null, warranty: null };
-  const stored = { name: "n", brand: "Acme", category: "Tools", description: "d", specs: { a: "1", b: "2" }, priceKes: 10, salePriceKes: null, warranty: null };
+  const row = { url: "u", slug: "u", name: "n", brand: null, category: null, description: "d", specs: { b: "2", a: "1" }, priceKes: 10, salePriceKes: null, warranty: null };
+  const stored = { url: "u", name: "n", brand: "Acme", category: "Tools", description: "d", specs: { a: "1", b: "2" }, priceKes: 10, salePriceKes: null, warranty: null };
 
   it("ignores spec order and keeps a brand the file leaves blank", () => {
     expect(sameProduct(stored, row)).toBe(true);
@@ -96,5 +96,26 @@ describe("sameProduct", () => {
   it("notices a changed price or brand", () => {
     expect(sameProduct({ ...stored, priceKes: 11 }, row)).toBe(false);
     expect(sameProduct(stored, { ...row, brand: "Other" })).toBe(false);
+  });
+});
+
+describe("normalizeCsv with a slug-only export", () => {
+  const header = "name,description,unit_price,slug,current_stock,est_shipping_days,meta_description,regular_price,sale_price";
+
+  it("matches by slug without a URL and reads regular and sale prices", () => {
+    const out = normalizeCsv([header, 'Vestwood,"<p>Hi</p>",35000,vestwood-kenya,3,1,x,40000,35000', "Plain,d,5000,plain-kenya,3,1,x,,"].join("\n"));
+    expect(out.skipped).toBe(0);
+    expect(out.rows[0]).toMatchObject({ slug: "vestwood-kenya", url: null, priceKes: 40000, salePriceKes: 35000 });
+    expect(out.rows[1]).toMatchObject({ slug: "plain-kenya", priceKes: 5000, salePriceKes: null });
+  });
+
+  it("skips rows with no usable slug", () => {
+    const out = normalizeCsv([header, "Bad,d,1,Not A Slug,3,1,x,,", "Empty,d,1,,3,1,x,,"].join("\n"));
+    expect(out).toMatchObject({ skipped: 2, rows: [] });
+  });
+
+  it("takes the slug from the URL's last path segment when there is no slug column", () => {
+    const out = normalizeCsv("name,product_url\nA,https://x.test/product/a-kenya-fKZW7/");
+    expect(out.rows[0]).toMatchObject({ slug: "a-kenya-fkzw7", url: "https://x.test/product/a-kenya-fKZW7/" });
   });
 });

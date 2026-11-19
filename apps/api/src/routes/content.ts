@@ -164,12 +164,12 @@ export async function contentRoutes(app: FastifyInstance) {
         throw error;
       }
 
-      const existing = new Map((await dataDb.select().from(schema.contentProducts).where(eq(schema.contentProducts.storeId, store.id))).map((p) => [p.url, p]));
+      const existing = new Map((await dataDb.select().from(schema.contentProducts).where(eq(schema.contentProducts.storeId, store.id))).map((p) => [p.slug, p]));
       const created: ImportRow[] = [];
       const updated: { row: ImportRow; id: string; priceChanged: boolean }[] = [];
       let unchanged = 0;
       for (const row of parsed.rows) {
-        const found = existing.get(row.url);
+        const found = existing.get(row.slug);
         if (!found) created.push(row);
         else if (sameProduct(found, row)) unchanged++;
         else updated.push({ row, id: found.id, priceChanged: found.priceKes !== row.priceKes || found.salePriceKes !== row.salePriceKes });
@@ -193,6 +193,7 @@ export async function contentRoutes(app: FastifyInstance) {
               priceKes: u.row.priceKes,
               salePriceKes: u.row.salePriceKes,
               warranty: u.row.warranty,
+              ...(u.row.url !== null ? { url: u.row.url } : {}),
               ...(u.row.brand !== null ? { brand: u.row.brand } : {}),
               ...(u.row.category !== null ? { category: u.row.category } : {}),
               ...(u.priceChanged ? { priceUpdatedAt: u.row.priceKes === null ? null : now } : {}),

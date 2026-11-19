@@ -139,3 +139,20 @@ describe("store facts", () => {
     expect((await user.api.get(`${url}?storeId=${(await newStore(other)).id}`)).status).toBe(404);
   });
 });
+
+describe("slug-only imports", () => {
+  it("imports an export with no URL column, then updates the same product by slug", async () => {
+    const user = await readyUser();
+    const store = await newStore(user);
+    const file = (regular: number) => ["name,description,unit_price,slug,regular_price,sale_price", `Vestwood 1KW,<p>Hi</p>,35000,vestwood-kenya,${regular},35000`].join("\n");
+    expect(await user.api.ok("POST", importUrl(store.id, "commit"), { csv: file(40000) })).toMatchObject({ created: 1, updated: 0 });
+    const [first] = (await user.api.ok("GET", `/content/stores/${store.id}/products`)).items;
+    expect(first).toMatchObject({ slug: "vestwood-kenya", url: null, priceKes: 40000, salePriceKes: 35000 });
+
+    const again = await user.api.ok("POST", importUrl(store.id, "commit"), { csv: file(42000) });
+    expect(again).toMatchObject({ created: 0, updated: 1, priceChanges: 1 });
+    const listed = await user.api.ok("GET", `/content/stores/${store.id}/products`);
+    expect(listed.total).toBe(1);
+    expect(listed.items[0]).toMatchObject({ id: first.id, priceKes: 42000 });
+  });
+});

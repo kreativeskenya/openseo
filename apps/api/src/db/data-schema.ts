@@ -710,8 +710,10 @@ export const contentProducts = pgTable(
     storeId: uuid("store_id")
       .notNull()
       .references(() => contentStores.id, { onDelete: "cascade" }),
-    // The product page address is the match key, so importing the same file twice never duplicates.
-    url: text("url").notNull(),
+    // The slug is the match key, so importing the same file twice never duplicates.
+    slug: text("slug").notNull(),
+    // The live page address, once known. Some exports have only slugs.
+    url: text("url"),
     name: text("name").notNull(),
     brand: text("brand"),
     category: text("category"),
@@ -727,7 +729,7 @@ export const contentProducts = pgTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (t) => [uniqueIndex("content_products_store_url_idx").on(t.storeId, t.url), index("content_products_store_idx").on(t.storeId)],
+  (t) => [uniqueIndex("content_products_store_slug_idx").on(t.storeId, t.slug), index("content_products_store_idx").on(t.storeId)],
 );
 
 /** Claims about a store (or the whole project) that the writer may state only once verified, with a source. */
