@@ -681,3 +681,70 @@ export const rankKeywordsRelations = relations(rankKeywords, ({ one }) => ({
   tracker: one(rankTrackers, { fields: [rankKeywords.trackerId], references: [rankTrackers.id] }),
 }));
 
+
+// ── Content Studio: the facts the writer is allowed to use ──────────────────
+
+export const FACT_KINDS = ["delivery", "payment", "warranty", "location", "contact", "policy", "other"] as const;
+export type FactKind = (typeof FACT_KINDS)[number];
+
+export const contentStores = pgTable(
+  "content_stores",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    domain: text("domain").notNull(),
+    notes: text("notes"),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("content_stores_project_domain_idx").on(t.projectId, t.domain)],
+);
+
+export const contentProducts = pgTable(
+  "content_products",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => contentStores.id, { onDelete: "cascade" }),
+    // The product page address is the match key, so importing the same file twice never duplicates.
+    url: text("url").notNull(),
+    name: text("name").notNull(),
+    brand: text("brand"),
+    category: text("category"),
+    // Plain text taken from the product page, one line per paragraph or list item.
+    description: text("description").notNull().default(""),
+    // "Key: value" lines read from the description, editable by hand.
+    specs: jsonb("specs").$type<Record<string, string>>().notNull().default({}),
+    priceKes: doublePrecision("price_kes"),
+    salePriceKes: doublePrecision("sale_price_kes"),
+    warranty: text("warranty"),
+    // When the price last changed or was first seen; the writer leaves out prices that are too old.
+    priceUpdatedAt: timestamp("price_updated_at", { withTimezone: true }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [uniqueIndex("content_products_store_url_idx").on(t.storeId, t.url), index("content_products_store_idx").on(t.storeId)],
+);
+
+/** Claims about a store (or the whole project) that the writer may state only once verified, with a source. */
+export const contentFacts = pgTable(
+  "content_facts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    storeId: uuid("store_id").references(() => contentStores.id, { onDelete: "cascade" }),
+    kind: text("kind").$type<FactKind>().notNull(),
+    statement: text("statement").notNull(),
+    source: text("source"),
+    verified: boolean("verified").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index("content_facts_project_idx").on(t.projectId), index("content_facts_store_idx").on(t.storeId)],
+);

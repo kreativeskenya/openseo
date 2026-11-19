@@ -20,6 +20,7 @@ import { projectRoutes } from "./routes/projects";
 import { publicToolRoutes } from "./routes/public-tools";
 import { rankRoutes } from "./routes/rank";
 import { geminiRoutes } from "./routes/gemini";
+import { contentRoutes } from "./routes/content";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -113,6 +114,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(lookupRoutes);
       await api.register(rankRoutes);
       await api.register(geminiRoutes);
+      await api.register(contentRoutes);
       await api.register(aiRoutes);
       await api.register(auditRoutes);
       await api.register(localRoutes);
