@@ -13,7 +13,7 @@ describe("sessions", () => {
     const { api, email } = await signUp("Ada");
     const me = await api.ok("GET", "/me");
     expect(me.user).toMatchObject({ email, name: "Ada" });
-    expect(me.settings).toEqual({ hasYepapiKey: false, yepapiKeyHint: null, yepapiKeyCheckedAt: null, monthlyBudgetUsd: null, onboardedAt: null });
+    expect(me.settings).toEqual({ hasGeminiKey: false, geminiKeyHint: null, geminiKeyCheckedAt: null, geminiModels: null, hasYepapiKey: false, yepapiKeyHint: null, yepapiKeyCheckedAt: null, monthlyBudgetUsd: null, onboardedAt: null });
   });
 
   it("records when the first-run welcome is finished", async () => {
