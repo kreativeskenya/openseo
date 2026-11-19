@@ -213,6 +213,8 @@ export async function contentRoutes(app: FastifyInstance) {
           unchanged,
           skipped: parsed.skipped,
           duplicates: parsed.duplicates,
+          priceConflicts: parsed.priceConflicts.length,
+          priceConflictExamples: parsed.priceConflicts.slice(0, 10),
           noPrice: parsed.noPrice,
           noWarranty: parsed.noWarranty,
           ignoredColumns: parsed.ignoredColumns,

@@ -24,6 +24,8 @@ export type ImportParse = {
   total: number;
   skipped: number;
   duplicates: number;
+  /** Slugs repeated in the file with different prices. The last row is kept. */
+  priceConflicts: string[];
   noPrice: number;
   noWarranty: number;
   ignoredColumns: string[];
@@ -177,6 +179,7 @@ export function normalizeCsv(text: string): ImportParse {
   const bySlug = new Map<string, ImportRow>();
   let skipped = 0;
   let duplicates = 0;
+  const conflicts = new Set<string>();
   for (const row of body) {
     const name = cell(row, nameCol).replace(/\s+/g, " ").slice(0, 300);
     const rawUrl = cell(row, urlCol);
@@ -192,7 +195,11 @@ export function normalizeCsv(text: string): ImportParse {
     let sale = parsePrice(cell(row, saleCol));
     if (price === null || (sale !== null && sale >= price)) sale = null;
     const warranty = cell(row, warrantyCol).slice(0, 60) || extractWarranty(description);
-    if (bySlug.has(slug)) duplicates++;
+    const prev = bySlug.get(slug);
+    if (prev) {
+      duplicates++;
+      if (prev.priceKes !== price || prev.salePriceKes !== sale) conflicts.add(slug);
+    }
     bySlug.set(slug, {
       url,
       slug,
@@ -212,6 +219,7 @@ export function normalizeCsv(text: string): ImportParse {
     total: body.length,
     skipped,
     duplicates,
+    priceConflicts: [...conflicts],
     noPrice: rows.filter((r) => r.priceKes === null).length,
     noWarranty: rows.filter((r) => r.warranty === null).length,
     ignoredColumns: IGNORED.filter((name) => header.includes(name)),

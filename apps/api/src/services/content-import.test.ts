@@ -119,3 +119,13 @@ describe("normalizeCsv with a slug-only export", () => {
     expect(out.rows[0]).toMatchObject({ slug: "a-kenya-fkzw7", url: "https://x.test/product/a-kenya-fKZW7/" });
   });
 });
+
+describe("repeated slugs with different prices", () => {
+  it("lists only the slugs whose rows disagree on price", () => {
+    const out = normalizeCsv(
+      ["name,slug,regular_price,sale_price", "Same,same-kenya,100,90", "Same,same-kenya,100,90", "Diff,diff-kenya,100,90", "Diff,diff-kenya,101,90"].join("\n"),
+    );
+    expect(out.duplicates).toBe(2);
+    expect(out.priceConflicts).toEqual(["diff-kenya"]);
+  });
+});
